@@ -199,10 +199,10 @@ Auto Skip <label class="switch"> <input type="checkbox" id="autoSkip"> <span cla
 <div class="controls">
 
 <div class="icon"
-  onmousedown="startHold()"
-  onmouseup="endHold()"
-  ontouchstart="startHold()"
-  ontouchend="endHold()">
+  ontouchstart="startHold(event)"
+  ontouchend="endHold(event)"
+  onmousedown="startHold(event)"
+  onmouseup="endHold(event)">
   <span><svg viewBox="0 0 24 24" width="30" height="30" fill="white">
   <path d="M3 9v6h4l5 4V5L7 9H3z"/>
 </svg></span>
@@ -332,7 +332,9 @@ async function toggleDrone(){
 let droneHoldTimer;
 let longPressTriggered = false;
 
-function startHold(){
+function startHold(e){
+  e.preventDefault(); // 🔥 vigtig på mobil
+
   longPressTriggered = false;
 
   droneHoldTimer = setTimeout(()=>{
@@ -342,12 +344,16 @@ function startHold(){
   }, 500);
 }
 
-function endHold(){
+function endHold(e){
+  e.preventDefault(); // 🔥 vigtig
+
   clearTimeout(droneHoldTimer);
 
   if(!longPressTriggered){
-    toggleDrone();
+    toggleDrone(); // kort tryk
   }
+
+  longPressTriggered = false;
 }
 
 function enterKeyMode(){
@@ -526,9 +532,7 @@ b.onmousedown = b.ontouchstart = () => {
 b.onmouseup = b.ontouchend = () => {
   clearTimeout(noteHoldTimer);
 
-  if(!selectingKey){
-    add(l);
-  }
+add(l);
 };
   grid.appendChild(b);
 });

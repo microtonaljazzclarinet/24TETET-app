@@ -428,6 +428,12 @@ function createBoxes(n){
 }
 
 function add(l){
+let index = labels.indexOf(l);
+
+// 🚫 block disabled tones
+if(!activeNotes[index]){
+  return;
+}
   if(selectingKey){
     currentKey = labels.indexOf(l);
 
@@ -519,20 +525,28 @@ labels.forEach((l,i)=>{
   b.innerText=l;
 
 let noteHoldTimer;
-
+let noteLongPress = false;
 b.onmousedown = b.ontouchstart = () => {
+  noteLongPress = false;
+
   noteHoldTimer = setTimeout(() => {
     let index = labels.indexOf(l);
     activeNotes[index] = !activeNotes[index];
 
     b.style.opacity = activeNotes[index] ? "1" : "0.25";
+
+    noteLongPress = true;
   }, 500);
 };
 
 b.onmouseup = b.ontouchend = () => {
   clearTimeout(noteHoldTimer);
 
-add(l);
+  if(!noteLongPress){
+    add(l);
+  }
+
+  noteLongPress = false;
 };
   grid.appendChild(b);
 });

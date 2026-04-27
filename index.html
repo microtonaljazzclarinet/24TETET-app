@@ -239,6 +239,7 @@ Auto Skip <label class="switch"> <input type="checkbox" id="autoSkip"> <span cla
 </div>
 
 <script>
+let activeNotes = Array(24).fill(true);
 document.body.addEventListener("click", () => {
   audioCtx.resume();
 }, { once: true });
@@ -328,16 +329,23 @@ async function toggleDrone(){
   droneOn=!droneOn;
 }
 
+let droneHoldTimer;
+let longPressTriggered = false;
+
 function startHold(){
-  holdTimer = setTimeout(()=>{
+  longPressTriggered = false;
+
+  droneHoldTimer = setTimeout(()=>{
     selectingKey = true;
+    longPressTriggered = true;
     enterKeyMode();
-  },1000);
+  }, 500);
 }
 
 function endHold(){
-  clearTimeout(holdTimer);
-  if(!selectingKey){
+  clearTimeout(droneHoldTimer);
+
+  if(!longPressTriggered){
     toggleDrone();
   }
 }
@@ -374,8 +382,24 @@ function newMelody(){
   let len=parseInt(document.getElementById("len").value);
 
   for(let i=0;i<len;i++){
-    melody.push(Math.floor(Math.random()*24));
+    let available = [];
+
+for(let i=0;i<24;i++){
+  if(activeNotes[i]) available.push(i);
+}
+
+// 🛑 hvis ingen toner valgt
+if(available.length === 0){
+  alert("Select at least one tone");
+  return;
+}
+
+// vælg kun fra aktive toner
+let randomNote = available[Math.floor(Math.random()*available.length)];
+
+melody.push(randomNote);
   }
+
 
   createBoxes(len);
   playMelody();
@@ -441,6 +465,7 @@ function check(){
 
   let isCorrect = JSON.stringify(correct) === JSON.stringify(user);
 
+  // vis farve
   if(isCorrect){
     boxes.forEach(b => b.classList.add("correct"));
   } else {
@@ -449,9 +474,18 @@ function check(){
 
   setTimeout(() => {
     boxes.forEach(b => b.classList.remove("correct","wrong"));
-    if(isCorrect && document.getElementById("autoSkip").checked){
-      newMelody();
+
+    if(isCorrect){
+      // autoskip
+      if(document.getElementById("autoSkip").checked){
+        newMelody();
+      }
+    } else {
+      // 🔥 clear on wrong
+      user = [];
+      updateBoxes();
     }
+
   }, 600);
 }
 
@@ -477,7 +511,25 @@ labels.forEach((l,i)=>{
   b.className="note";
   if(i % 2 === 1) b.classList.add("alt");
   b.innerText=l;
-  b.onclick=()=>add(l);
+
+let noteHoldTimer;
+
+b.onmousedown = b.ontouchstart = () => {
+  noteHoldTimer = setTimeout(() => {
+    let index = labels.indexOf(l);
+    activeNotes[index] = !activeNotes[index];
+
+    b.style.opacity = activeNotes[index] ? "1" : "0.25";
+  }, 500);
+};
+
+b.onmouseup = b.ontouchend = () => {
+  clearTimeout(noteHoldTimer);
+
+  if(!selectingKey){
+    add(l);
+  }
+};
   grid.appendChild(b);
 });
 if ("serviceWorker" in navigator) {

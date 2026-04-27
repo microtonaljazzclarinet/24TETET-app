@@ -8,6 +8,29 @@
 <title>24 TETET</title>
 
 <style>
+
+@keyframes savePulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px #4da3ff);
+  }
+  50% {
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 12px #4da3ff);
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px #4da3ff);
+  }
+}
+
+.icon.saved svg {
+  animation: savePulse 0.4s ease;
+}
+.note.active-drone {
+  outline: 2px solid #4da3ff;
+  box-shadow: 0 0 12px rgba(77,163,255,0.8);
+}
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -32,13 +55,32 @@ h1 {
     0 0 6px rgba(77,163,255,0.6),
     0 0 20px rgba(77,163,255,0.3);
 }
+.button {
+  background: #4da3ff;
+  color: black;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
 
+.button.secondary {
+  background: #2a3558;
+  color: white;
+}
 #settingsBtn {
   position: absolute;
   top: 10px;
   right: 10px;
-  font-size: 20px;
   cursor: pointer;
+  width: 26px;
+  height: 26px;
+}
+
+#settingsBtn svg {
+  width: 100%;
+  height: 100%;
 }
 
 #settingsPanel {
@@ -51,6 +93,15 @@ h1 {
   display: none;
   width: 180px;
   text-align: left;
+}
+#scalePanel {
+  position: absolute;
+  background: #141a2b;
+  padding: 10px;
+  border-radius: 10px;
+  display: none;
+  width: 260px;
+  z-index: 10;
 }
 
 input[type=range] {
@@ -179,9 +230,11 @@ box-sizing: border-box;
 <body>
 
 <div class="container">
-
-<div id="settingsBtn" onclick="toggleSettings()">⚙</div>
-
+<div id="settingsBtn" onclick="toggleSettings()">
+  <svg viewBox="0 0 24 24" fill="white">
+    <path d="M19.14,12.94a7.49,7.49,0,0,0,.05-.94,7.49,7.49,0,0,0-.05-.94l2.11-1.65a.5.5,0,0,0,.12-.64l-2-3.46a.5.5,0,0,0-.6-.22l-2.49,1a7.28,7.28,0,0,0-1.63-.94l-.38-2.65A.5.5,0,0,0,13.8,2H10.2a.5.5,0,0,0-.49.42L9.33,5.07a7.28,7.28,0,0,0-1.63.94l-2.49-1a.5.5,0,0,0-.6.22l-2,3.46a.5.5,0,0,0,.12.64L4.86,11.06a7.49,7.49,0,0,0-.05.94,7.49,7.49,0,0,0,.05.94L2.75,14.59a.5.5,0,0,0-.12.64l2,3.46a.5.5,0,0,0,.6.22l2.49-1a7.28,7.28,0,0,0,1.63.94l.38,2.65a.5.5,0,0,0,.49.42h3.6a.5.5,0,0,0,.49-.42l.38-2.65a7.28,7.28,0,0,0,1.63-.94l2.49,1a.5.5,0,0,0,.6-.22l2-3.46a.5.5,0,0,0-.12-.64ZM12,15.5A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/>
+  </svg>
+</div>
 <div id="settingsPanel">
 Drone Volume<br>
 <input type="range" min="0" max="0.3" step="0.01" value="0.15" id="droneVol"><br><br>
@@ -197,7 +250,15 @@ Auto Skip <label class="switch"> <input type="checkbox" id="autoSkip"> <span cla
 <h1>24 TETET</h1>
 
 <div class="controls">
-
+<div class="icon" id="presetBtn"
+  ontouchstart="presetHoldStart(event)"
+  ontouchend="presetHoldEnd(event)"
+  onmousedown="presetHoldStart(event)"
+  onmouseup="presetHoldEnd(event)">
+  <svg viewBox="0 0 24 24" fill="white">
+    <path d="M10 4H2v16h20V6H12l-2-2z"/>
+  </svg>
+</div>
 <div class="icon"
   ontouchstart="startHold(event)"
   ontouchend="endHold(event)"
@@ -227,18 +288,43 @@ Auto Skip <label class="switch"> <input type="checkbox" id="autoSkip"> <span cla
 </svg>
 </div>
 
-<div class="icon icon-delete" onclick="backspace()"><svg viewBox="0 0 24 24" width="30" height="30" fill="white">
-  <path d="M22 3H7L2 12l5 9h15V3zM17 16l-2-2-2 2-1.5-1.5 2-2-2-2L13 9l2 2 2-2L18.5 10l-2 2 2 2L17 16z"/>
-</svg></div>
 </div>
 
-<div id="boxes"></div>
+<div id="boxes"
+  onclick="boxRowClick()"
+  ontouchstart="boxRowTouchStart()"
+  ontouchend="boxRowTouchEnd()"
+  onmousedown="boxRowTouchStart()"
+  onmouseup="boxRowTouchEnd()">
+</div>
 <div id="status"></div>
 <div id="grid"></div>
+<div id="scalePanel">
 
-</div>
+<div id="presetList"></div>
 
 <script>
+let presetTimer;
+let presetLong = false;
+
+function presetHoldStart(e){
+  e.preventDefault();
+  presetLong = false;
+
+  presetTimer = setTimeout(()=>{
+    presetLong = true;
+    saveScalePreset(); // 🔥 long press = save
+  }, 500);
+}
+
+function presetHoldEnd(e){
+  e.preventDefault();
+  clearTimeout(presetTimer);
+
+  if(!presetLong){
+    toggleScalePanel(); // 🔥 tap = open
+  }
+}
 let activeNotes = Array(24).fill(true);
 document.body.addEventListener("click", () => {
   audioCtx.resume();
@@ -247,7 +333,243 @@ let instrumentMode = false;
 let selectingKey = false;
 let holdTimer = null;
 let currentKey = 0;
+let chordDrones = {};
+let scalePresets = JSON.parse(localStorage.getItem("scalePresets") || "[]");
+addBuiltInPresets();
+function toggleChordDrone(index){
+  let f = freq(index);
+  let notes = document.querySelectorAll(".note");
+  let el = notes[index];
 
+  if(chordDrones[index]){
+    // stop
+ let t = audioCtx.currentTime;
+
+// smooth fade out
+chordDrones[index].gain.gain.cancelScheduledValues(t);
+chordDrones[index].gain.gain.setValueAtTime(chordDrones[index].gain.gain.value, t);
+chordDrones[index].gain.gain.linearRampToValueAtTime(0, t + 0.15);
+
+// stop AFTER fade
+chordDrones[index].osc.stop(t + 0.16);
+
+    delete chordDrones[index];
+
+    el.classList.remove("active-drone"); // 👈 remove highlight
+  } else {
+    // start
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+
+    let target = parseFloat(document.getElementById("droneVol").value);
+
+    osc.type = "triangle";
+    osc.frequency.value = f;
+
+    gain.gain.value = 0;
+
+    osc.connect(gain);
+    gain.connect(master);
+
+    osc.start();
+
+    gain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + 0.2);
+
+    chordDrones[index] = {osc, gain};
+
+    el.classList.add("active-drone"); // 👈 highlight
+  }}
+
+function addBuiltInPresets(){
+  let builtIns = [
+    {
+      name: "Major",
+      builtIn: true,
+      notes: buildScale([0,4,8,10,14,18,22])
+    },
+    {
+      name: "Minor",
+      builtIn: true,
+      notes: buildScale([0,4,6,10,14,16,22])
+    },
+    {
+      name: "Chromatic",
+      builtIn: true,
+      notes: buildScale([0,2,4,6,8,10,12,14,16,18,20,22])
+    },
+    {
+      name: "All 24",
+      builtIn: true,
+      notes: Array(24).fill(true)
+    }
+  ];
+
+  // 🔥 remove old built-ins (important)
+  scalePresets = scalePresets.filter(p => !p.builtIn);
+
+  scalePresets = [...builtIns, ...scalePresets];
+
+  localStorage.setItem("scalePresets", JSON.stringify(scalePresets));
+}
+function buildScale(indices){
+  let arr = Array(24).fill(false);
+  indices.forEach(i => arr[i] = true);
+  return arr;
+}
+function createBoxes(n){
+  const boxDiv=document.getElementById("boxes");
+  boxDiv.innerHTML="";
+
+  for(let i=0;i<n;i++){
+    let b=document.createElement("div");
+    b.className="box";
+    boxDiv.appendChild(b);
+  }
+}
+function saveScalePreset(){
+  let name = "Preset " + (scalePresets.length + 1);
+
+  scalePresets.push({
+    name: name,
+    notes: [...activeNotes]
+  });
+
+  localStorage.setItem("scalePresets", JSON.stringify(scalePresets));
+  renderScalePresets();
+
+  // 🔥 trigger animation
+  let btn = document.getElementById("presetBtn");
+  btn.classList.add("saved");
+
+  setTimeout(()=>{
+    btn.classList.remove("saved");
+  }, 400);
+}
+function loadScalePreset(index){
+  let preset = scalePresets[index];
+
+  let notes = Array.isArray(preset) ? preset : preset.notes;
+
+  activeNotes = [...notes];
+
+  document.querySelectorAll(".note").forEach((n,i)=>{
+    n.style.opacity = activeNotes[i] ? "1" : "0.25";
+  });
+}
+function deleteScalePreset(index){
+  scalePresets.splice(index,1);
+  localStorage.setItem("scalePresets", JSON.stringify(scalePresets));
+  renderScalePresets();
+}
+function toggleScalePanel(){
+  let panel = document.getElementById("scalePanel");
+  let btn = document.getElementById("presetBtn");
+
+  if(panel.style.display === "block"){
+    panel.style.display = "none";
+    return;
+  }
+
+  let rect = btn.getBoundingClientRect();
+  let container = document.querySelector(".container");
+  let containerRect = container.getBoundingClientRect();
+
+  panel.style.display = "block";
+
+  panel.style.top = (rect.bottom - containerRect.top + 8) + "px";
+let left = rect.left - containerRect.left + rect.width/2 - panel.offsetWidth/2;
+
+// 🔥 keep inside container
+left = Math.max(10, left);
+left = Math.min(left, container.offsetWidth - panel.offsetWidth - 10);
+
+panel.style.left = left + "px";
+  renderScalePresets();
+}
+function renderScalePresets(){
+  let list = document.getElementById("presetList");
+  list.innerHTML = "";
+
+  scalePresets.forEach((preset,i)=>{
+   let item = document.createElement("div");
+
+item.style.padding = "8px";
+item.style.marginBottom = "6px";
+item.style.background = "#0f1628";
+item.style.borderRadius = "6px";
+item.style.display = "flex";
+item.style.alignItems = "center";
+
+let name = Array.isArray(preset)
+  ? "Preset " + (i+1)
+  : preset.name;
+
+// LEFT SIDE (text)
+let label = document.createElement("span");
+label.innerText = name;
+label.style.flex = "1";
+label.style.textAlign = "left"; // ✅ FIX
+
+// CLICK = load
+item.onclick = () => {
+  loadScalePreset(i);
+  toggleScalePanel();
+};
+
+// RIGHT SIDE (icons container)
+let right = document.createElement("div");
+right.style.display = "flex";
+right.style.alignItems = "center";
+
+// ✏️ EDIT only for user presets
+if(!preset.builtIn){
+  let edit = document.createElement("span");
+
+  edit.innerHTML = `
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="white">
+    <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 0-1.41L18.37 3.29a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+  </svg>
+  `;
+
+  edit.style.cursor = "pointer";
+
+  edit.onclick = (e) => {
+    e.stopPropagation();
+
+    let newName = prompt("Rename preset:", name);
+    if(newName){
+      preset.name = newName;
+      localStorage.setItem("scalePresets", JSON.stringify(scalePresets));
+      renderScalePresets();
+    }
+  };
+
+  right.appendChild(edit);
+}
+
+// 🔥 DELETE on hold (only user presets)
+let holdTimer;
+
+item.onmousedown = item.ontouchstart = () => {
+  if(preset.builtIn) return;
+
+  holdTimer = setTimeout(()=>{
+    if(confirm("Delete this preset?")){
+      deleteScalePreset(i);
+    }
+  }, 500);
+};
+
+item.onmouseup = item.ontouchend = () => {
+  clearTimeout(holdTimer);
+};
+
+// FINAL STRUCTURE
+item.appendChild(label);
+item.appendChild(right);
+list.appendChild(item);
+  });
+}
 function setStatus(text){
   document.getElementById("status").innerText = text;
 }
@@ -375,10 +697,18 @@ function exitKeyMode(){
 }
 
 document.getElementById("droneVol").oninput=function(){
+  let val = parseFloat(this.value);
+  let t = audioCtx.currentTime;
+
+  // main drone
   if(droneOn && droneGain){
-    let t=audioCtx.currentTime;
-    droneGain.gain.setTargetAtTime(parseFloat(this.value),t,0.1);
+    droneGain.gain.setTargetAtTime(val, t, 0.1);
   }
+
+  // 🔥 update ALL chord drones live
+  Object.values(chordDrones).forEach(d => {
+    d.gain.gain.setTargetAtTime(val, t, 0.1);
+  });
 };
 
 function newMelody(){
@@ -415,16 +745,6 @@ function playMelody(){
   melody.forEach((n,i)=>{
     setTimeout(()=>play(freq(n)),i*650);
   });
-}
-
-function createBoxes(n){
-  const boxDiv=document.getElementById("boxes");
-  boxDiv.innerHTML="";
-  for(let i=0;i<n;i++){
-    let b=document.createElement("div");
-    b.className="box";
-    boxDiv.appendChild(b);
-  }
 }
 
 function add(l){
@@ -532,12 +852,16 @@ b.ontouchstart = (e) => {
   noteLongPress = false;
 
   noteHoldTimer = setTimeout(() => {
-    let index = labels.indexOf(l);
-    activeNotes[index] = !activeNotes[index];
+let index = labels.indexOf(l);
 
-    b.style.opacity = activeNotes[index] ? "1" : "0.25";
+if(instrumentMode){
+  toggleChordDrone(index);
+} else {
+  activeNotes[index] = !activeNotes[index];
+  b.style.opacity = activeNotes[index] ? "1" : "0.25";
+}
 
-    noteLongPress = true;
+noteLongPress = true;
   }, 500);
 };
 
@@ -546,14 +870,17 @@ b.onmousedown = () => {
 
   noteHoldTimer = setTimeout(() => {
     let index = labels.indexOf(l);
-    activeNotes[index] = !activeNotes[index];
 
-    b.style.opacity = activeNotes[index] ? "1" : "0.25";
+    if(instrumentMode){
+      toggleChordDrone(index);
+    } else {
+      activeNotes[index] = !activeNotes[index];
+      b.style.opacity = activeNotes[index] ? "1" : "0.25";
+    }
 
     noteLongPress = true;
   }, 500);
 };
-
 b.onmouseup = b.ontouchend = () => {
   clearTimeout(noteHoldTimer);
 
@@ -567,6 +894,62 @@ b.onmouseup = b.ontouchend = () => {
 });
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
+}
+document.addEventListener("click", (e) => {
+  let scalePanel = document.getElementById("scalePanel");
+  let presetBtn = document.getElementById("presetBtn");
+
+  let settingsPanel = document.getElementById("settingsPanel");
+  let settingsBtn = document.getElementById("settingsBtn");
+
+  // 🔹 CLOSE SCALE PANEL
+  if(scalePanel.style.display === "block"){
+    if(!scalePanel.contains(e.target) && !presetBtn.contains(e.target)){
+      scalePanel.style.display = "none";
+    }
+  }
+
+  // 🔹 CLOSE SETTINGS PANEL
+  if(settingsPanel.style.display === "block"){
+    if(!settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)){
+      settingsPanel.style.display = "none";
+    }
+  }
+});
+function boxRowClick(){
+  if(user.length > 0){
+    user.pop();
+    updateBoxes();
+  }
+}
+
+let clearTimer;
+let wasLongPress = false;
+
+function boxRowTouchStart(){
+  wasLongPress = false;
+
+  clearTimer = setTimeout(()=>{
+    user = [];
+    updateBoxes();
+    wasLongPress = true;
+  }, 600);
+}
+
+function boxRowTouchEnd(){
+  clearTimeout(clearTimer);
+}
+
+function boxRowClick(){
+  if(wasLongPress){
+    wasLongPress = false;
+    return; // 🚫 prevent click after hold
+  }
+
+  if(user.length > 0){
+    user.pop();
+    updateBoxes();
+  }
 }
 </script>
 
